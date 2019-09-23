@@ -13,7 +13,15 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Util" />
+      <Compile Remove="Util\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <EmbeddedResource Remove="Util\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="Util\**" />
     </ItemGroup>
 
 </Project>
