@@ -30,13 +30,23 @@ namespace Lsf
 
             while (input != "5")
             {
-
-                Console.WriteLine("[0]: Add an event");
-                Console.WriteLine("[1]: Prefer an early timetable");
-                Console.WriteLine("[2]: Build timetables");
-                Console.WriteLine("[3]: Export timetable to ical");
-                Console.WriteLine("[4]: Export timetable to lsf");
-                Console.WriteLine("[5]: Exit");
+                var actionAddEvent = "0";
+                var actionPreferEarly = "1";
+                var actionBuild = "2";
+                var actionToIcal = "3";
+                var actionToLsf = "4";
+                var actionLoadFromFile = "5";
+                var actionSaveFile = "6";
+                var actionExit = "7";
+                
+                Console.WriteLine($"[{actionAddEvent}]: Add an event");
+                Console.WriteLine($"[{actionPreferEarly}]: Prefer an early timetable");
+                Console.WriteLine($"[{actionBuild}]: Build timetables");
+                Console.WriteLine($"[{actionToIcal}]: Export timetable to ical");
+                Console.WriteLine($"[{actionToLsf}]: Export timetable to lsf");
+                Console.WriteLine($"[{actionLoadFromFile}]: Load previous configured events from file");
+                Console.WriteLine($"[{actionSaveFile}]: Safe configured events to file");
+                Console.WriteLine($"[{actionExit}]: Exit");
 
                 Console.Write("Please enter the number of the action you want to perform: ");
 
@@ -44,7 +54,7 @@ namespace Lsf
 
                 switch (input)
                 {
-                    case "0":
+                    case actionAddEvent:
                     {
                         Console.Write("Please paste the url of the event: ");
                         input = Console.ReadLine();
@@ -85,7 +95,7 @@ namespace Lsf
                         break;
                     }
 
-                    case "1":
+                    case actionPreferEarly:
                     {
                         builder.AddItemCriterion(new EarlyCriterion());
                         Console.WriteLine("I'll keep that in mind.");
@@ -93,13 +103,13 @@ namespace Lsf
                         break;
                     }
 
-                    case "2":
+                    case actionBuild:
                     {
                         schedules = builder.Build().Result;
                         break;
                     }
 
-                    case "3":
+                    case actionToIcal:
                     {
                         if (schedules is null)
                         {
@@ -135,7 +145,7 @@ namespace Lsf
                         break;
                     }
 
-                    case "4":
+                    case actionToLsf:
                     {
                         if (schedules is null)
                         {
