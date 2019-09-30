@@ -1,17 +1,14 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Dynamic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using HtmlAgilityPack;
 using HtmlAgilityPack.CssSelectors.NetCore;
 using Lsf.Models;
 
-namespace Lsf.Client
+namespace Lsf.Schedule.Client
 {
     
     
@@ -19,7 +16,7 @@ namespace Lsf.Client
     {
         private static readonly CookieContainer CookieContainer = new CookieContainer();
         
-        private static readonly HttpClient HttpClient = new HttpClient(new HttpClientHandler
+        private readonly HttpClient _httpClient = new HttpClient(new HttpClientHandler
         {
             AllowAutoRedirect = true,
             CookieContainer = CookieContainer,
@@ -33,6 +30,8 @@ namespace Lsf.Client
         {
             BaseUrl = baseUrl;
         }
+
+        public bool IsAuthenticated { get; private set; } = false;
 
         protected virtual bool RequiresAuthentication => false;
 
@@ -90,6 +89,11 @@ namespace Lsf.Client
 
         public async Task<bool> Authenticate(string userName, string password)
         {
+            if (IsAuthenticated)
+            {
+                return true;
+            }
+            
             var loginPage = await GetMainPage();
             var form = loginPage.DocumentNode.QuerySelectorAll("form").Single(node => node.Attributes["name"]?.Value == "loginform");
 
@@ -106,18 +110,22 @@ namespace Lsf.Client
                 {"asdf", userName}, {"fdsa", password}, {"submit", "Anmelden"}
             }));
 
-            return content.DocumentNode.QuerySelectorAll("a")
-                       .SingleOrDefault(node => node.Attributes["href"]?.Value.Contains("auth.logout") == true) != null;
+            var result = content.DocumentNode.QuerySelectorAll("a")
+                                   .SingleOrDefault(node => node.Attributes["href"]?.Value.Contains("auth.logout") == true) != null;
+
+            IsAuthenticated = result;
+            
+            return result;
         }
 
-        public static async Task<string> PostAsync(string url, HttpContent content)
+        public async Task<string> PostAsync(string url, HttpContent content)
         {
-            var result = await HttpClient.PostAsync(url, content);
+            var result = await _httpClient.PostAsync(url, content);
             
             return await result.Content.ReadAsStringAsync();
         }
 
-        private static async Task<HtmlDocument> PostAsyncHtml(string url, HttpContent content)
+        private async Task<HtmlDocument> PostAsyncHtml(string url, HttpContent content)
         {
             var response = await PostAsync(url, content);
             
@@ -138,7 +146,7 @@ namespace Lsf.Client
             return node;
         }
 
-        private static async Task<HtmlDocument> GetHtmlAsync(string url)
+        private async Task<HtmlDocument> GetHtmlAsync(string url)
         {
             var content = await GetAsync(url);
             var doc = new HtmlDocument();
@@ -147,9 +155,9 @@ namespace Lsf.Client
             return doc;
         }
 
-        private static async Task<string> GetAsync(string url)
+        private async Task<string> GetAsync(string url)
         {
-            var response = await HttpClient.GetAsync(url);
+            var response = await _httpClient.GetAsync(url);
 
             return await response.Content.ReadAsStringAsync();
         }
