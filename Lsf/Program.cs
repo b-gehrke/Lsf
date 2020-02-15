@@ -6,11 +6,12 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Xml.Schema;
 using Ical.Net.Serialization;
+using Lsf.Client;
 using Lsf.Models;
 using Lsf.Parser;
 using Lsf.Schedule;
-using Lsf.Schedule.Client;
 using Lsf.Schedule.Criteria;
+using Lsf.Schedule.Models;
 
 namespace Lsf
 {
@@ -135,11 +136,13 @@ namespace Lsf
 
                     case addCriterion:
                     {
-                        void AddOrRemoveCriterion(IWeightedCriterion criterion, string message)
+                        void AddOrRemoveCriterion(ICriterion criterion, string message)
                         {
-                            Console.Write($"{message} [y/N]: ");
+                            var currentState = builder.HasCriterion(criterion);
+                            
+                            Console.Write($"{message} [{(currentState ? "Y/n" : "y/N")}]: ");
                             input = Console.ReadLine().ToLower();
-                            if (input == "y")
+                            if (input == "y" && !currentState)
                             {
                                 switch (criterion)
                                 {
@@ -151,7 +154,7 @@ namespace Lsf
                                         break;
                                 }
                             }
-                            else
+                            else if(input == "n" && currentState)
                             {
                                 switch (criterion)
                                 {

@@ -1,5 +1,6 @@
 using Ical.Net.CalendarComponents;
 using Lsf.Models;
+using Lsf.Schedule.Models;
 
 namespace Lsf.Parser
 {

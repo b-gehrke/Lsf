@@ -29,6 +29,19 @@ namespace Lsf.Schedule
             _factory = factory;
         }
 
+        public bool HasCriterion(ICriterion criterion)
+        {
+            if (criterion is IScheduleCriterion scheduleCriterion)
+            {
+                return _scheduleCriteria.Any(scheduleCriterion.GetType().IsInstanceOfType);
+            }else if (criterion is IItemCriterion itemCriterion)
+            {
+                return _itemCriteria.Any(itemCriterion.GetType().IsInstanceOfType);
+            }
+
+            return false;
+        }
+
         public int EventsCount => _eventEntries.Count;
         public bool IsBuild { get; private set; } = false;
 

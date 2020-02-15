@@ -2,7 +2,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using HtmlAgilityPack;
 
-namespace Lsf.Parser
+namespace Lsf.Client.Parser
 {
     public abstract class WebParser
     {

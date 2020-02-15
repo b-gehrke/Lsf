@@ -1,6 +1,7 @@
+using Lsf.Models;
 using Ical.Net;
 
-namespace Lsf.Models
+namespace Lsf.Schedule.Models
 {
     public class CalSchedule : Schedule<CalScheduleItem>
     {

@@ -7,6 +7,8 @@ using HtmlAgilityPack;
 using HtmlAgilityPack.CssSelectors.NetCore;
 using Ical.Net;
 using Ical.Net.CalendarComponents;
+using Lsf.Client;
+using Lsf.Client.Parser;
 using Lsf.Models;
 using Calendar = Ical.Net.Calendar;
 

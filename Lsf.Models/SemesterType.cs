@@ -2,7 +2,7 @@ namespace Lsf.Models
 {
     public enum SemesterType
     {
-        Winter,
-        Summer
+        Winter = 2,
+        Summer = 1
     }
 }

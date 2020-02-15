@@ -1,0 +1,9 @@
+[Unit]
+Description=Connects to LSF, monitors exam result and sends mails on changes
+
+[Service]
+Type=notify
+ExecStart=/usr/sbin/lsfgradingservice
+
+[Install]
+WantedBy=multi-user.target
