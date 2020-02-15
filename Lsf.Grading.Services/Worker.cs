@@ -30,61 +30,84 @@ namespace Lsf.Grading.Services
             {
                 new TelegramNotifier(_config.TelegramBotAccessToken, _logger, _config.TelegramChatId)
             };
-            _client = new LsfClient("https://lsf.ovgu.de");
+            _client = new LsfClient(_config.BaseUrl);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             if (!await _client.Authenticate(_config.LoginCookie))
             {
-                await Notify("Authentication for fetching grades failed!");
+                await HandleError("Authentication for fetching grades failed!");
                 return;
             }
 
             
             var parser = new GradingParser(_client);
-            var degrees = new List<Degree>();
+            IEnumerable<Degree> degrees = new List<Degree>();
             
             while (!stoppingToken.IsCancellationRequested)
             {
-                var changes = new List<ExamResultChangeTracking>();
-                var currentDegrees = await parser.GetGradesForAllDegrees();
-
-                foreach (var degree in currentDegrees)
+                try
                 {
-                    if (!degrees.Contains(degree, new GenericEqualityComparer<Degree>((a, b) => a.Id == b.Id)))
+                    degrees = await UpdateExamResults(parser, degrees);
+                }
+                catch (Exception e)
+                {
+                    await HandleError("An Exception occured: \n" + e);
+                    throw;
+                }
+
+                await Task.Delay(15 * 60 * 1000, stoppingToken);
+            }
+        }
+
+        private async Task HandleError(string message)
+        {
+            _logger.LogError(message);
+            await Notify(message);
+        }
+
+        private async Task<IEnumerable<Degree>> UpdateExamResults(GradingParser parser, IEnumerable<Degree> previousDegrees)
+        {
+            var changes = new List<ExamResultChangeTracking>();
+            var currentDegrees = await parser.GetGradesForAllDegrees();
+
+            var previousDegreesArr = previousDegrees as Degree[] ?? previousDegrees.ToArray();
+            foreach (var degree in currentDegrees)
+            {
+                if (!previousDegreesArr.Contains(degree, new GenericEqualityComparer<Degree>((a, b) => a.Id == b.Id)))
+                {
+                    changes.AddRange(ToExamResultChangeTracking(degree));
+                }
+                else
+                {
+                    foreach (var major in degree.GradingMajors)
                     {
-                        changes.AddRange(ToExamResultChangeTracking(degree));
-                    }
-                    else
-                    {
-                        foreach (var major in degree.GradingMajors)
+                        if (!degree.GradingMajors.Contains(major,
+                            new GenericEqualityComparer<Major>((a, b) => a.Id == b.Id)))
                         {
-                            if (!degree.GradingMajors.Contains(major,
-                                new GenericEqualityComparer<Major>((a, b) => a.Id == b.Id)))
-                            {
-                                changes.AddRange(ToExamResultChangeTracking(degree, major));
-                            }
-                            else
-                            {
-                                changes.AddRange(major.Gradings.Where(grading => !major.Gradings.Contains(grading,
-                                        new GenericEqualityComparer<ExamResult>((a, b) =>
-                                            a.ExamNumber == b.ExamNumber && a.Try == b.Try &&
-                                            a.ExamState == b.ExamState &&
-                                            (float.IsNaN(a.Grade) && float.IsNaN(b.Grade) ||
-                                             Math.Abs(a.Grade - b.Grade) < .001))))
-                                    .Select(grading => ToExamResultChangeTracking(degree, major, grading)));
-                            }
+                            changes.AddRange(ToExamResultChangeTracking(degree, major));
+                        }
+                        else
+                        {
+                            changes.AddRange(major.Gradings.Where(grading => !major.Gradings.Contains(grading,
+                                    new GenericEqualityComparer<ExamResult>((a, b) =>
+                                        a.ExamNumber == b.ExamNumber && a.Try == b.Try &&
+                                        a.ExamState == b.ExamState &&
+                                        (float.IsNaN(a.Grade) && float.IsNaN(b.Grade) ||
+                                         Math.Abs(a.Grade - b.Grade) < .001))))
+                                .Select(grading => ToExamResultChangeTracking(degree, major, grading)));
                         }
                     }
                 }
+            }
 
-                var changedDegrees = changes
-                    .GroupBy(x => x.DegreeId)
-                    .Select(g => new Degree
+            var changedDegrees = changes
+                .GroupBy(x => x.DegreeId)
+                .Select(g => new Degree
                 {
                     Id = g.Key,
-                    Name = g.First().DegreeName, 
+                    Name = g.First().DegreeName,
                     GradingMajors = g.GroupBy(x => x.MajorId).Select(mg =>
                         new Major
                         {
@@ -94,15 +117,13 @@ namespace Lsf.Grading.Services
                         })
                 }).ToArray();
 
-                if (changedDegrees.Length > 0)
-                {
-                    await Notify(changedDegrees);
-                }
-
-                degrees = degrees.Union(changedDegrees, new GenericEqualityComparer<Degree>((a, b) => a.Id == b.Id)).ToList();
-                
-                await Task.Delay(15 * 60 * 1000, stoppingToken);
+            if (changedDegrees.Length > 0)
+            {
+                _logger.LogInformation($"Found {changes.Count} changes in exam results.");
+                await Notify(changedDegrees);
             }
+
+            return previousDegreesArr.Union(changedDegrees, new GenericEqualityComparer<Degree>((a, b) => a.Id == b.Id));
         }
 
 
