@@ -6,11 +6,11 @@ namespace Lsf.Client.Parser
 {
     public abstract class WebParser
     {
-        private static readonly HttpClient _httpClient = new HttpClient();
+        private readonly LsfHttpClient _httpClient;
 
-        protected WebParser(string baseUrl)
+        protected WebParser(LsfHttpClient httpClient)
         {
-            BaseUrl = baseUrl;
+            _httpClient = httpClient;
         }
 
         protected virtual bool RequiresAuthentication => false;

@@ -5,9 +5,9 @@ namespace Lsf.Models
         public string EventId { get; set; }
         public string Name { get; set; }
         public string Type { get; set; }
-        public Appointment[] Appointments { get; set; }
-        public SmallGroup[] SmallGroups { get; set; }
-        public bool HasSmallGroup => SmallGroups != null;
+        public virtual Appointment[] Appointments { get; set; }
+        public virtual SmallGroup[] SmallGroups { get; set; }
+        public virtual bool HasSmallGroup => SmallGroups != null;
 
         public string ScheduleId { get; set; } = null;
     }

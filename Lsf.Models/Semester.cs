@@ -7,6 +7,14 @@ namespace Lsf.Models
     {
         public int Year { get; set; }
         public SemesterType SemesterType { get; set; }
+        public static Semester Current
+        {
+            get
+            {
+                var d = DateTime.Now.AddMonths(-4);
+                return new Semester(d.Year, d.Month <= 6 ? SemesterType.Summer : SemesterType.Winter);
+            }
+        }
 
         public Semester(int year, SemesterType semesterType)
         {
@@ -58,7 +66,7 @@ namespace Lsf.Models
 
         public override string ToString()
         {
-            return ToSemesterCode().ToString();
+            return (SemesterType == SemesterType.Summer ? "SoSe" : "WiSe") + " " + Year;
         }
     }
 }

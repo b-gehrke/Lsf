@@ -12,6 +12,7 @@ using Lsf.Parser;
 using Lsf.Schedule;
 using Lsf.Schedule.Criteria;
 using Lsf.Schedule.Models;
+using Lsf.Util;
 
 namespace Lsf
 {
@@ -19,53 +20,65 @@ namespace Lsf
     {
         private static void MainMenu()
         {
-                        
         }
-        
+
+        private static string ReadWithDefault(string message, string def)
+        {
+            Console.Write($"{message} ({def}): ");
+            var input = Console.ReadLine();
+            return string.IsNullOrEmpty(input) ? def : input;
+        }
+
         private static void Main(string[] args)
         {
-            Console.Write("Please enter the base url of the LSF (https://lsf.ovgu.de/qislsf): ");
-            var input = Console.ReadLine();
+            string input = null;
+            var baseUrl = ReadWithDefault("Please enter the base url of the LSF", "https://lsf.ovgu.de/");
+
+            var semesterStr = ReadWithDefault("Please enter a semester", Semester.Current.ToString());
+            var semester = Semester.Parse(semesterStr);
             
-            var baseUrl = string.IsNullOrEmpty(input) ? "https://lsf.ovgu.de/qislsf" : input;
-            var builder = new ScheduleBuilder<CalSchedule, CalScheduleItem>(new CalEventParser(baseUrl),
+            Console.Write($"Please enter the semester you want to plan (): ");
+
+            var httpClient = new LsfHttpClientImpl(baseUrl);
+            var client = new LsfScheduleClient(httpClient, new CalEventParser());
+            var builder = new ScheduleBuilder<CalSchedule, CalScheduleItem>(client,
                 new GenericScheduleItemFactory<CalScheduleItem>((appointment, component) => new CalScheduleItem
                 {
                     Appointment = appointment,
                     ScheduleComponent = component
                 }));
-            
-            
-            var client = new LsfClient("https://lsf.ovgu.de");
 
             CalSchedule[] schedules = null;
-            
-            
+
 
             var earlyCriterion = new EarlyCriterion();
             var equallyDistributedAppointmentsPerDayCriterion = new EquallyDistributedAppointmentsPerDayCriterion();
             var freeDaysCriterion = new FreeDaysCriterion();
             var eventsOnSameAlternatingSlotCriterion = new EventsOnSameAlternatingSlotCriterion(10000);
             var sameAlternatingWeekCriterion = new SameAlternatingWeekCriterion();
-            
+            var noBreaksCriterion = new NoBreaksCriterion();
+
             const string actionAddEvent = "0";
             const string addCriterion = "1";
             const string actionBuild = "2";
             const string actionToIcal = "3";
             const string actionToLsf = "4";
-            const string actionLoadFromFile = "5";
-            const string actionSaveFile = "6";
-            const string actionExit = "7";
+            const string actionPrintCal = "5";
+            const string actionLoadFromFile = "6";
+            const string actionSaveFile = "7";
+            const string actionExit = "8";
             while (input != actionExit)
             {
 //                Console.Clear();
 
-                Console.WriteLine($"{builder.EventsCount} events saved. Timetables are {(builder.IsBuild ? "" : "not ")}build");
+                Console.WriteLine(
+                    $"{builder.EventsCount} events saved. Timetables are {(builder.IsBuild ? "" : "not ")}build");
                 Console.WriteLine($"[{actionAddEvent}]: Add an event");
                 Console.WriteLine($"[{addCriterion}]: Configure a preferences");
                 Console.WriteLine($"[{actionBuild}]: Build timetables");
                 Console.WriteLine($"[{actionToIcal}]: Export timetable to ical");
                 Console.WriteLine($"[{actionToLsf}]: Export timetable to lsf");
+                Console.WriteLine($"[{actionPrintCal}]: Print timetable to console");
                 Console.WriteLine($"[{actionLoadFromFile}]: Load previous configured events from file");
                 Console.WriteLine($"[{actionSaveFile}]: Safe configured events to file");
                 Console.WriteLine($"[{actionExit}]: Exit");
@@ -83,8 +96,9 @@ namespace Lsf
                         var eventId = Regex.Match(input, @"publishid=(\d+)").Groups[1].Value;
 
                         var e = builder.AddEvent(eventId);
-                        
-                        Console.Write("Does the event consist of small groups and did you already got assigned (to one or more)? [y/N]: ");
+
+                        Console.Write(
+                            "Does the event consist of small groups and did you already got assigned (to one or more)? [y/N]: ");
                         input = Console.ReadLine();
 
                         if (input.ToLower() == "y")
@@ -139,7 +153,7 @@ namespace Lsf
                         void AddOrRemoveCriterion(ICriterion criterion, string message)
                         {
                             var currentState = builder.HasCriterion(criterion);
-                            
+
                             Console.Write($"{message} [{(currentState ? "Y/n" : "y/N")}]: ");
                             input = Console.ReadLine().ToLower();
                             if (input == "y" && !currentState)
@@ -154,7 +168,7 @@ namespace Lsf
                                         break;
                                 }
                             }
-                            else if(input == "n" && currentState)
+                            else if (input == "n" && currentState)
                             {
                                 switch (criterion)
                                 {
@@ -169,10 +183,14 @@ namespace Lsf
                         }
 
                         AddOrRemoveCriterion(earlyCriterion, "Do you prefer an early timetable?");
-                        AddOrRemoveCriterion(equallyDistributedAppointmentsPerDayCriterion, "Do you prefer appointments equally distributed over every day?");
+                        AddOrRemoveCriterion(equallyDistributedAppointmentsPerDayCriterion,
+                            "Do you prefer appointments equally distributed over every day?");
                         AddOrRemoveCriterion(freeDaysCriterion, "Do you prefer free days?");
-                        AddOrRemoveCriterion(eventsOnSameAlternatingSlotCriterion, "Do you prefer filling an empty 2-Weeks event slot with an other 2-Weeks event?");
-                        AddOrRemoveCriterion(sameAlternatingWeekCriterion, "Do you prefer all 2-Week events to be on the same week?");
+                        AddOrRemoveCriterion(eventsOnSameAlternatingSlotCriterion,
+                            "Do you prefer filling an empty 2-Weeks event slot with an other 2-Weeks event?");
+                        AddOrRemoveCriterion(sameAlternatingWeekCriterion,
+                            "Do you prefer all 2-Week events to be on the same week?");
+                        AddOrRemoveCriterion(noBreaksCriterion, "Do you prefer no breaks between you lessons?");
 
                         break;
                     }
@@ -240,16 +258,15 @@ namespace Lsf
                         if (string.IsNullOrEmpty(input) ||
                             int.TryParse(input, out i) && i <= schedules.Length)
                         {
-                            if (!client.IsAuthenticated)
+                            if (!httpClient.IsAuthenticated)
                             {
-
                                 Console.Write("Please enter your lsf username: ");
                                 var userName = Console.ReadLine();
 
                                 Console.Write("Please enter your lsf password: ");
                                 var password = ReadPassword();
 
-                                var success = client.Authenticate(userName, password).Result;
+                                var success = httpClient.Authenticate(userName, password).Result;
 
 
                                 if (!success)
@@ -258,12 +275,12 @@ namespace Lsf
                                     break;
                                 }
                             }
-                            
+
                             var top = schedules[i];
-                            client.SetSemester(2019, SemesterType.Winter).Wait();
-                                client.ReplaceSchedule(top.ScheduleItems.Select(x => x.ScheduleComponent).ToArray())
-                                    .Wait();
-                                Console.WriteLine("Saved best schedule to lsf account!");
+                            httpClient.SetSemester(semester).Wait();
+                            client.ReplaceSchedule(top.ScheduleItems.Select(x => x.ScheduleComponent).ToArray())
+                                .Wait();
+                            Console.WriteLine("Saved best schedule to lsf account!");
                         }
                         else
                         {
@@ -273,9 +290,31 @@ namespace Lsf
                         break;
                     }
 
+                    case actionPrintCal:
+                    {
+                        Console.Write("Which schedule? (Defaults to 1) [1-" + schedules.Length + "] ");
+                        input = Console.ReadLine();
+
+                        var i = 1;
+                        if (string.IsNullOrEmpty(input) ||
+                            int.TryParse(input, out i) && i <= schedules.Length)
+                        {
+                            var top = schedules[i];
+                            Console.WriteLine(new CalendarPrinter(Console.BufferWidth, FormattingStyle.Console, top.ToCalendar()).Print());
+                        }
+                        else
+                        {
+                            Console.WriteLine("Invalid input");
+                        }
+                        
+                        break;
+                    }
+
                     case actionSaveFile:
                     {
-                        var path = Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "lsf-api", "events.json"));
+                        var path = Path.GetFullPath(Path.Combine(
+                            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "lsf-api",
+                            "events.json"));
                         Console.Write($"Where should the file be stored? [{path}]: ");
                         input = Console.ReadLine();
 
@@ -283,18 +322,20 @@ namespace Lsf
                         {
                             path = Path.GetFullPath(input);
                         }
-                        
+
                         Directory.CreateDirectory(Path.GetDirectoryName(path));
-                        
+
                         var state = builder.GetStateSnapshot();
                         File.WriteAllText(path, state);
-                        
+
                         break;
                     }
 
                     case actionLoadFromFile:
                     {
-                        var path = Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "lsf-api", "events.json"));
+                        var path = Path.GetFullPath(Path.Combine(
+                            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "lsf-api",
+                            "events.json"));
                         Console.Write($"Where should is file stored? [{path}]: ");
                         input = Console.ReadLine();
 
@@ -311,7 +352,7 @@ namespace Lsf
 
                         var state = File.ReadAllText(path);
                         builder.LoadStateSnapshot(state);
-                        
+
                         break;
                     }
                     default:
@@ -342,13 +383,13 @@ namespace Lsf
                         pass = pass.Substring(0, (pass.Length - 1));
                         Console.Write("\b \b");
                     }
-                    else if(key.Key == ConsoleKey.Enter)
+                    else if (key.Key == ConsoleKey.Enter)
                     {
                         break;
                     }
                 }
             } while (true);
-            
+
             Console.WriteLine();
 
             return pass;

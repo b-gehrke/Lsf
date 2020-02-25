@@ -14,10 +14,10 @@ namespace Lsf.Schedule.Criteria
         /// Whether or not multiple criteria of this kind are allowed to be applied at the same time
         /// </summary>
         bool MultipleCriteriaAllowed { get; }
-        
+
         /// <summary>
-        /// Criteria that can not be applied along with this criterion. E.g. because they mean the opposite.
+        /// Returns whether or not the conflicts with another criterion and therefore cannot be applied along with this criterion. E.g. because they mean the opposite.
         /// </summary>
-        IEnumerable<ICriterion> Excludes { get; }
+        bool ConflictsWith(ICriterion other);
     }
 }

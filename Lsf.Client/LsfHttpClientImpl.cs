@@ -9,35 +9,50 @@ using HtmlAgilityPack.CssSelectors.NetCore;
 
 namespace Lsf.Client
 {
-    public class LsfClient : AsyncHttpClient
+    public abstract class LsfHttpClient : AsyncHttpClient
     {
-        public LsfClient(string baseUrl) : base(baseUrl)
+        public LsfHttpClient(string baseAddress) : base(baseAddress)
+        {
+        }
+
+        public abstract bool IsAuthenticated { get; protected set; }
+        public abstract string BaseUrl { get; }
+        public abstract Uri BaseUri { get; }
+        public abstract string Url(string queryParams);
+        public abstract Task<HtmlDocument> GetMainPage();
+        public abstract Task<bool> Authenticate(string jSessionId);
+        public abstract Task<bool> Authenticate(string userName, string password);
+    }
+
+    public class LsfHttpClientImpl : LsfHttpClient
+    {
+        public LsfHttpClientImpl(string baseUrl) : base(baseUrl)
         {
             BaseUrl = baseUrl;
         }
 
-        public bool IsAuthenticated { get; private set; }
+        public override bool IsAuthenticated { get; protected set; }
 
-        public string BaseUrl { get; }
+        public override string BaseUrl { get; }
         
-        public Uri BaseUri => new Uri(BaseUrl);
+        public override Uri BaseUri => new Uri(BaseUrl);
         
-        public string Url(string queryParams)
+        public override string Url(string queryParams)
         {
             return $"{BaseUrl}/qislsf/rds?{queryParams}";
         }
 
-        public Task<HtmlDocument> GetMainPage()
+        public override Task<HtmlDocument> GetMainPage()
         {
             return GetHtmlAsync(GetMainPageUrl());
         }
 
         private string GetMainPageUrl()
         {
-            return Url("state=user&type=0");
+            return Url("state=user&type=0&topitem=&breadCrumbSource=portal&topitem=functions");
         }
 
-        public async Task<bool> Authenticate(string jSessionId)
+        public override async Task<bool> Authenticate(string jSessionId)
         {
             var cookies = CookieContainer.GetCookies(BaseUri);
             var jSessionIdCookie = cookies["JSESSIONID"] ?? new Cookie("JSESSIONID", jSessionId)
@@ -52,11 +67,9 @@ namespace Lsf.Client
             return await VerifyAuthentication();
         }
 
-        public string CookieDomain => "." + BaseUrl.Split("/")[2];
-
-        public async Task<bool> Authenticate(string userName, string password)
+        public override async Task<bool> Authenticate(string userName, string password)
         {
-            if (IsAuthenticated)
+            if (await VerifyAuthentication())
             {
                 return true;
             }

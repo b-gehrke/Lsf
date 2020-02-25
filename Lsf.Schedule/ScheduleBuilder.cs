@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Lsf.Client;
 using Lsf.Models;
-using Lsf.Parser;
 using Lsf.Schedule.Criteria;
 using Newtonsoft.Json;
 
@@ -14,19 +14,13 @@ namespace Lsf.Schedule
         private readonly Dictionary<string, EventEntry> _eventEntries = new Dictionary<string, EventEntry>();
         private readonly List<IItemCriterion> _itemCriteria = new List<IItemCriterion>();
         private readonly List<IScheduleCriterion> _scheduleCriteria = new List<IScheduleCriterion>();
-        private readonly EventParser _eventParser;
         private readonly IScheduleItemFactory<S> _factory;
+        private readonly LsfScheduleClient _client;
 
-        public ScheduleBuilder(string baseUrl, IScheduleItemFactory<S> factory)
+        public ScheduleBuilder(LsfScheduleClient client, IScheduleItemFactory<S> factory)
         {
             _factory = factory;
-            _eventParser = new EventParser(baseUrl);
-        }
-
-        public ScheduleBuilder(EventParser eventParser, IScheduleItemFactory<S> factory)
-        {
-            _eventParser = eventParser;
-            _factory = factory;
+            _client = client;
         }
 
         public bool HasCriterion(ICriterion criterion)
@@ -34,7 +28,9 @@ namespace Lsf.Schedule
             if (criterion is IScheduleCriterion scheduleCriterion)
             {
                 return _scheduleCriteria.Any(scheduleCriterion.GetType().IsInstanceOfType);
-            }else if (criterion is IItemCriterion itemCriterion)
+            }
+            
+            if (criterion is IItemCriterion itemCriterion)
             {
                 return _itemCriteria.Any(itemCriterion.GetType().IsInstanceOfType);
             }
@@ -157,7 +153,7 @@ namespace Lsf.Schedule
 
         private Task<Event[]> LoadEvents()
         {
-            return Task.WhenAll(_eventEntries.Values.Select(entry => _eventParser.Parse(entry.EventId)));
+            return Task.WhenAll(_eventEntries.Values.Select(entry => _client.GetEvent(entry.EventId)));
         }
 
         public EventEntryBuilder AddEvent(string eventId)

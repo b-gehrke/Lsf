@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -14,11 +16,8 @@ using Calendar = Ical.Net.Calendar;
 
 namespace Lsf.Parser
 {
-    public class EventParser : WebParser
+    public class EventParser
     {
-        public EventParser(string baseUrl) : base(baseUrl)
-        {
-        }
 
         private RecurringType RecurringTypeFromCalendarEvent(CalendarEvent @event)
         {
@@ -55,24 +54,28 @@ namespace Lsf.Parser
             return rule?.ByDay[0].DayOfWeek ?? ev.Start.DayOfWeek;
         }
 
-        public async Task<Event> Parse(string eventId)
-        {
-            var url =
-                $"{BaseUrl}/rds?state=verpublish&status=init&vmfile=no&publishid={eventId}&moduleCall=webInfo&publishConfFile=webInfo&publishSubDir=veranstaltung";
-            var document = await GetHtmlAsync(url);
-
-            var icalsImage = document.DocumentNode.QuerySelectorAll("caption a > img")
-                .Where(x => x.Attributes["title"]?.Value == "iCalendar Export");
-            var links = icalsImage.Select(image => image.ParentNode.GetAttributeValue("href", null))
+        public IEnumerable<string> GetIcalLinksFromDocument(HtmlDocument document) =>
+            document.DocumentNode.QuerySelectorAll("caption a > img")
+                .Where(x => x.Attributes["title"]?.Value == "iCalendar Export")
+                .Select(image => image.ParentNode.GetAttributeValue("href", null))
                 .Where(x => x != null)
                 .Select(HtmlEntity.DeEntitize);
 
-            var groups = (await Task.WhenAll(links.Select(GetAsync)))
-                .Select(content => Regex.Replace(Regex.Replace(content.Replace("\r", "\n"), "\\n+", "\n"), "\\n(?:([^A-Z]))", "$1"))
-                .Select(Calendar.Load)
-                .Select((ical, i) => (events: ical.Events.Select(e => ParseAppointment(e, eventId)).ToArray(),
+        public Calendar ParseICalendar(string source)
+        {
+            var cleanedSource = Regex.Replace(Regex.Replace(source.Replace("\r", "\n"), "\\n+", "\n"), "\\n(?:([^A-Z]))", "$1");
+            
+            return Calendar.Load(cleanedSource);
+        }
+
+        public Event Parse(string eventId, IEnumerable<Calendar> appointmentCalendars)
+        {
+            var groups = appointmentCalendars
+                .Select((ical, i) => (
+                    events: ical.Events.Select(e => ParseAppointment(e, eventId)).ToArray(),
                     group: i + 1,
-                    native: ical.Events))
+                    native: ical.Events)
+                )
                 .ToArray();
 
             if (groups.Length > 0)

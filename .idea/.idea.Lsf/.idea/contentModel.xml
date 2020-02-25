@@ -23,7 +23,7 @@
         <e p="AsyncHttpClient.cs" t="Include" />
         <e p="ClientFunctionality.cs" t="Include" />
         <e p="Lsf.Client.csproj" t="IncludeRecursive" />
-        <e p="LsfClient.cs" t="Include" />
+        <e p="LsfHttpClientImpl.cs" t="Include" />
         <e p="Parser" t="Include">
           <e p="WebParser.cs" t="Include" />
         </e>
@@ -71,6 +71,7 @@
         <e p="appsettings.Development.json" t="Include" />
         <e p="appsettings.json" t="Include" />
         <e p="bin" t="ExcludeRecursive" />
+        <e p="build.hydrogen.sh" t="Include" />
         <e p="obj" t="ExcludeRecursive">
           <e p="Debug" t="Include">
             <e p="netcoreapp3.0" t="Include">
@@ -101,7 +102,6 @@
         </e>
       </e>
       <e p="Lsf.Schedule" t="IncludeRecursive">
-        <e p="ClientFunctionality.cs" t="Include" />
         <e p="Criteria" t="Include">
           <e p="EarlyCriterion.cs" t="Include" />
           <e p="EquallyDistributedAppointmentsPerDayCriterion.cs" t="Include" />
@@ -111,6 +111,7 @@
           <e p="IScheduleCriterion.cs" t="Include" />
           <e p="IWeightedCriterion.cs" t="Include" />
           <e p="ItemCriterion.cs" t="Include" />
+          <e p="NoBreaksCriterion.cs" t="Include" />
           <e p="SameAlternatingWeekCriterion.cs" t="Include" />
           <e p="ScheduleCriterion.cs" t="Include" />
           <e p="TeacherCriterion.cs" t="Include" />
@@ -118,6 +119,7 @@
         <e p="GenericScheduleItemFactory.cs" t="Include" />
         <e p="IScheduleItemFactory.cs" t="Include" />
         <e p="Lsf.Schedule.csproj" t="IncludeRecursive" />
+        <e p="LsfScheduleClient.cs" t="Include" />
         <e p="Models" t="Include">
           <e p="CalAppointment.cs" t="Include" />
           <e p="CalSchedule.cs" t="Include" />
@@ -139,6 +141,7 @@
       </e>
       <e p="Lsf.Test" t="IncludeRecursive">
         <e p="AppointmentTests.cs" t="Include" />
+        <e p="CalendarPrinterTests.cs" t="Include" />
         <e p="ClientTests.cs" t="Include" />
         <e p="GradingTests.cs" t="Include" />
         <e p="Lsf.Test.csproj" t="IncludeRecursive" />
@@ -148,6 +151,20 @@
             <e p="netcoreapp3.0" t="Include">
               <e p="Lsf.Test.AssemblyInfo.cs" t="Include" />
               <e p="Lsf.Test.Program.cs" t="Include" />
+            </e>
+          </e>
+        </e>
+      </e>
+      <e p="Lsf.Util" t="IncludeRecursive">
+        <e p="CalendarPrinter.cs" t="Include" />
+        <e p="Lsf.Util.csproj" t="IncludeRecursive" />
+        <e p="Program.cs" t="Include" />
+        <e p="StringExtensions.cs" t="Include" />
+        <e p="bin" t="ExcludeRecursive" />
+        <e p="obj" t="ExcludeRecursive">
+          <e p="Debug" t="Include">
+            <e p="netcoreapp3.0" t="Include">
+              <e p="Lsf.Util.AssemblyInfo.cs" t="Include" />
             </e>
           </e>
         </e>

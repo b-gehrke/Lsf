@@ -1,11 +1,15 @@
 using Lsf.Models;
+using Newtonsoft.Json;
 
 namespace Lsf.Schedule.Criteria
 {
     public class TeacherCriterion : ItemCriterion
     {
+        [JsonProperty("person")]
         private readonly string _person;
+        [JsonProperty("prefer")]
         private readonly bool _prefer;
+        [JsonProperty("eventId")]
         private readonly string _eventId;
 
         public TeacherCriterion(string person, bool prefer, string eventId, double weight = 1) : base(true, null, weight)

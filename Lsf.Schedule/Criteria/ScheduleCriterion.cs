@@ -9,12 +9,14 @@ namespace Lsf.Schedule.Criteria
         protected ScheduleCriterion(bool multipleCriteriaAllowed = true, IEnumerable<ICriterion> excludes = null, double weight = 1)
         {
             MultipleCriteriaAllowed = multipleCriteriaAllowed;
-            Excludes = excludes ?? Enumerable.Empty<ICriterion>();
             Weight = weight;
         }
 
         public bool MultipleCriteriaAllowed { get; }
-        public IEnumerable<ICriterion> Excludes { get; }
+        public virtual bool ConflictsWith(ICriterion other)
+        {
+            return false;
+        }
         public double Weight { get; }
         public abstract double Rate(ISchedule schedule);
 

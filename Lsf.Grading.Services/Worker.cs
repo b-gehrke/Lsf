@@ -20,7 +20,7 @@ namespace Lsf.Grading.Services
         private readonly Config _config;
 
         private readonly List<INotifier> _notifiers;
-        private readonly LsfClient _client;
+        private readonly LsfHttpClient _httpClient;
 
         public Worker(ILogger<Worker> logger, IConfiguration config)
         {
@@ -30,19 +30,21 @@ namespace Lsf.Grading.Services
             {
                 new TelegramNotifier(_config.TelegramBotAccessToken, _logger, _config.TelegramChatId)
             };
-            _client = new LsfClient(_config.BaseUrl);
+            _httpClient = new LsfHttpClientImpl(_config.BaseUrl);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            if (!await _client.Authenticate(_config.LoginCookie))
+            if (!await _httpClient.Authenticate(_config.LoginCookie))
             {
                 await HandleError("Authentication for fetching grades failed!");
                 return;
             }
+            
+            _logger.LogDebug($"Execution started");
 
             
-            var parser = new GradingParser(_client);
+            var parser = new GradingParser(_httpClient);
             IEnumerable<Degree> degrees = new List<Degree>();
             
             while (!stoppingToken.IsCancellationRequested)
@@ -121,6 +123,10 @@ namespace Lsf.Grading.Services
             {
                 _logger.LogInformation($"Found {changes.Count} changes in exam results.");
                 await Notify(changedDegrees);
+            }
+            else
+            {
+                _logger.LogDebug($"Found no new exams");
             }
 
             return previousDegreesArr.Union(changedDegrees, new GenericEqualityComparer<Degree>((a, b) => a.Id == b.Id));

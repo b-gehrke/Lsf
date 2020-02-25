@@ -5,13 +5,13 @@ namespace Lsf.Client
 {
     public static class ClientFunctionality
     {
-        public static async Task SetSemester(this LsfClient client, int year, SemesterType semesterType)
+        public static async Task SetSemester(this LsfHttpClient httpClient, Semester semester)
         {
-            var part = semesterType == SemesterType.Summer ? 1 : 2;
-            var url = client.Url(
-                $"state=user&type=0&k_semester.semid={year}{part}&idcol=k_semester.semid&idval={year}{part}&purge=n&getglobal=semester");
+            var part = semester.SemesterType == SemesterType.Summer ? 1 : 2;
+            var url = httpClient.Url(
+                $"state=user&type=0&k_semester.semid={semester.Year}{part}&idcol=k_semester.semid&idval={semester.Year}{part}&purge=n&getglobal=semester");
 
-            await client.GetStringAsync(url);
+            await httpClient.GetStringAsync(url);
         }
     }
 }

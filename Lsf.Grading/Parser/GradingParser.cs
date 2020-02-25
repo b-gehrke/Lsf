@@ -18,16 +18,16 @@ namespace Lsf.Grading.Parser
 {
     public class GradingParser
     {
-        public LsfClient Client { get; }
+        public LsfHttpClient HttpClient { get; }
 
-        public GradingParser(LsfClient client)
+        public GradingParser(LsfHttpClient httpClient)
         {
-            Client = client;
+            HttpClient = httpClient;
         }
 
         public async Task<IEnumerable<Degree>> GetGradesForAllDegrees()
         {
-            var mainPage = await Client.GetMainPage();
+            var mainPage = await HttpClient.GetMainPage();
             var link =
                 HtmlEntity.DeEntitize(mainPage.QuerySelector("#makronavigation a[href*='studyPOSMenu']")?.Attributes["href"].Value);
 
@@ -36,11 +36,11 @@ namespace Lsf.Grading.Parser
                 throw new Exception("Couldn't find the link to 'Prüfungsverwaltung'!");
             }
 
-            var content = await Client.GetHtmlAsync(link);
+            var content = await HttpClient.GetHtmlAsync(link);
             link = HtmlEntity.DeEntitize(content.QuerySelector("a[href*='notenspiegel']")?.Attributes["href"].Value);
 
 
-            content = await Client.GetHtmlAsync(link);
+            content = await HttpClient.GetHtmlAsync(link);
 
             var links = content.QuerySelectorAll(".treelist a[href*='list.vm']");
             var degreeParseTasks = links.Select(l =>
@@ -53,7 +53,7 @@ namespace Lsf.Grading.Parser
 
         private async Task<Degree> ParseDegree(string url, string name)
         {
-            var content = await Client.GetHtmlAsync(url);
+            var content = await HttpClient.GetHtmlAsync(url);
             var degreeText = content
                 .QuerySelectorAll(".content > form > table tr")
                 .SingleOrDefault(x => x.ChildNodes.Count == 1)?.InnerText;

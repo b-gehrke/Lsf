@@ -6,10 +6,6 @@ namespace Lsf.Parser
 {
     public class CalEventParser : EventParser
     {
-        public CalEventParser(string baseUrl) : base(baseUrl)
-        {
-        }
-
         protected override Appointment ParseAppointment(CalendarEvent ev, string eventId)
         {
             var baseResult = base.ParseAppointment(ev, eventId);

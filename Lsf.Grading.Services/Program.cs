@@ -20,7 +20,6 @@ namespace Lsf.Grading.Services
         public static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
                 .UseSystemd()
-                // .ConfigureAppConfiguration(((hostingContext, config) => { config.AddJsonFile("appsettings.json", ); }))
                 .ConfigureServices((hostContext, services) =>
                 {
                     services.AddHostedService<Worker>();

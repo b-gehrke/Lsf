@@ -35,6 +35,7 @@
       <ProjectReference Include="..\Lsf.Client\Lsf.Client.csproj" />
       <ProjectReference Include="..\Lsf.Models\Lsf.Models.csproj" />
       <ProjectReference Include="..\Lsf.Schedule\Lsf.Schedule.csproj" />
+      <ProjectReference Include="..\Lsf.Util\Lsf.Util.csproj"/>
     </ItemGroup>
 
 </Project>

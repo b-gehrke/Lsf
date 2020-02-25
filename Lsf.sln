@@ -14,6 +14,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lsf.Grading", "Lsf.Grading\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lsf.Grading.Services", "Lsf.Grading.Services\Lsf.Grading.Services.csproj", "{EAB8F657-5F44-4409-819F-E8B2E9B39347}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lsf.Util", "Lsf.Util\Lsf.Util.csproj", "{EE66B635-55DB-475C-B1D3-DFC676558638}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -48,5 +50,9 @@ Global
 		{EAB8F657-5F44-4409-819F-E8B2E9B39347}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EAB8F657-5F44-4409-819F-E8B2E9B39347}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EAB8F657-5F44-4409-819F-E8B2E9B39347}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EE66B635-55DB-475C-B1D3-DFC676558638}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EE66B635-55DB-475C-B1D3-DFC676558638}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EE66B635-55DB-475C-B1D3-DFC676558638}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EE66B635-55DB-475C-B1D3-DFC676558638}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

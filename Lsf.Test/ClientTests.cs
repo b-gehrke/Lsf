@@ -6,9 +6,9 @@ namespace Lsf.Test
 {
     public class ClientTests
     {
-        public static LsfClient Client()
+        public static LsfHttpClient Client()
         {
-            return new LsfClient("https://lsf.ovgu.de");
+            return new LsfHttpClientImpl("https://lsf.ovgu.de");
         }
 
         [Test]
