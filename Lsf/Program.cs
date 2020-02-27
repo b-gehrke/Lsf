@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Data.Common;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
-using System.Xml.Schema;
 using Ical.Net.Serialization;
 using Lsf.Client;
 using Lsf.Models;
@@ -32,12 +29,10 @@ namespace Lsf
         private static void Main(string[] args)
         {
             string input = null;
-            var baseUrl = ReadWithDefault("Please enter the base url of the LSF", "https://lsf.ovgu.de/");
+            var baseUrl = ReadWithDefault("Please enter the base url of the LSF", "https://lsf.ovgu.de");
 
-            var semesterStr = ReadWithDefault("Please enter a semester", Semester.Current.ToString());
+            var semesterStr = ReadWithDefault("Please enter a semester", Semester.Current.Next().ToString());
             var semester = Semester.Parse(semesterStr);
-            
-            Console.Write($"Please enter the semester you want to plan (): ");
 
             var httpClient = new LsfHttpClientImpl(baseUrl);
             var client = new LsfScheduleClient(httpClient, new CalEventParser());
@@ -67,6 +62,7 @@ namespace Lsf
             const string actionLoadFromFile = "6";
             const string actionSaveFile = "7";
             const string actionExit = "8";
+            const string actionGetLoginCookie = "9";
             while (input != actionExit)
             {
 //                Console.Clear();
@@ -82,8 +78,6 @@ namespace Lsf
                 Console.WriteLine($"[{actionLoadFromFile}]: Load previous configured events from file");
                 Console.WriteLine($"[{actionSaveFile}]: Safe configured events to file");
                 Console.WriteLine($"[{actionExit}]: Exit");
-
-                Console.Write("Please enter the number of the action you want to perform: ");
 
                 input = Console.ReadLine();
 
@@ -157,7 +151,6 @@ namespace Lsf
                             Console.Write($"{message} [{(currentState ? "Y/n" : "y/N")}]: ");
                             input = Console.ReadLine().ToLower();
                             if (input == "y" && !currentState)
-                            {
                                 switch (criterion)
                                 {
                                     case IItemCriterion itemCriterion:
@@ -167,9 +160,7 @@ namespace Lsf
                                         builder.AddScheduleCriterion(scheduleCriterion);
                                         break;
                                 }
-                            }
                             else if (input == "n" && currentState)
-                            {
                                 switch (criterion)
                                 {
                                     case IItemCriterion itemCriterion:
@@ -179,7 +170,6 @@ namespace Lsf
                                         builder.RemoveScheduleCriterion(scheduleCriterion);
                                         break;
                                 }
-                            }
                         }
 
                         AddOrRemoveCriterion(earlyCriterion, "Do you prefer an early timetable?");
@@ -259,22 +249,8 @@ namespace Lsf
                             int.TryParse(input, out i) && i <= schedules.Length)
                         {
                             if (!httpClient.IsAuthenticated)
-                            {
-                                Console.Write("Please enter your lsf username: ");
-                                var userName = Console.ReadLine();
-
-                                Console.Write("Please enter your lsf password: ");
-                                var password = ReadPassword();
-
-                                var success = httpClient.Authenticate(userName, password).Result;
-
-
-                                if (!success)
-                                {
-                                    Console.WriteLine("Authentication failed!");
+                                if (!Authenticate(httpClient))
                                     break;
-                                }
-                            }
 
                             var top = schedules[i];
                             httpClient.SetSemester(semester).Wait();
@@ -300,13 +276,14 @@ namespace Lsf
                             int.TryParse(input, out i) && i <= schedules.Length)
                         {
                             var top = schedules[i];
-                            Console.WriteLine(new CalendarPrinter(Console.BufferWidth, FormattingStyle.Console, top.ToCalendar()).Print());
+                            Console.WriteLine(new CalendarPrinter(Console.BufferWidth, FormattingStyle.Console,
+                                top.ToCalendar()).Print());
                         }
                         else
                         {
                             Console.WriteLine("Invalid input");
                         }
-                        
+
                         break;
                     }
 
@@ -318,10 +295,7 @@ namespace Lsf
                         Console.Write($"Where should the file be stored? [{path}]: ");
                         input = Console.ReadLine();
 
-                        if (!string.IsNullOrEmpty(input))
-                        {
-                            path = Path.GetFullPath(input);
-                        }
+                        if (!string.IsNullOrEmpty(input)) path = Path.GetFullPath(input);
 
                         Directory.CreateDirectory(Path.GetDirectoryName(path));
 
@@ -339,10 +313,7 @@ namespace Lsf
                         Console.Write($"Where should is file stored? [{path}]: ");
                         input = Console.ReadLine();
 
-                        if (!string.IsNullOrEmpty(input))
-                        {
-                            path = Path.GetFullPath(input);
-                        }
+                        if (!string.IsNullOrEmpty(input)) path = Path.GetFullPath(input);
 
                         if (!File.Exists(path))
                         {
@@ -355,6 +326,17 @@ namespace Lsf
 
                         break;
                     }
+                    case actionGetLoginCookie:
+                    {
+                        if (!Authenticate(httpClient)) break;
+
+                        var cookie = httpClient.GetLoginCookie();
+                        Console.WriteLine(
+                            "Here is your session cookie. Treat this as a password as anybody can access your account using this cookie until you log out of the session.");
+                        Console.WriteLine(cookie);
+
+                        break;
+                    }
                     default:
                     {
                         Console.WriteLine("Unrecognized input");
@@ -362,6 +344,26 @@ namespace Lsf
                     }
                 }
             }
+        }
+
+        private static bool Authenticate(LsfHttpClient httpClient)
+        {
+            Console.Write("Please enter your lsf username: ");
+            var userName = Console.ReadLine();
+
+            Console.Write("Please enter your lsf password: ");
+            var password = ReadPassword();
+
+            var success = httpClient.Authenticate(userName, password).Result;
+
+
+            if (!success)
+            {
+                Console.WriteLine("Authentication failed!");
+                return false;
+            }
+
+            return true;
         }
 
         private static string ReadPassword()
@@ -380,7 +382,7 @@ namespace Lsf
                 {
                     if (key.Key == ConsoleKey.Backspace && pass.Length > 0)
                     {
-                        pass = pass.Substring(0, (pass.Length - 1));
+                        pass = pass.Substring(0, pass.Length - 1);
                         Console.Write("\b \b");
                     }
                     else if (key.Key == ConsoleKey.Enter)

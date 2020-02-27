@@ -1,12 +1,18 @@
 using System;
-using System.Security.Cryptography;
 
 namespace Lsf.Models
 {
     public class Semester
     {
+        public Semester(int year, SemesterType semesterType)
+        {
+            Year = year;
+            SemesterType = semesterType;
+        }
+
         public int Year { get; set; }
         public SemesterType SemesterType { get; set; }
+
         public static Semester Current
         {
             get
@@ -16,10 +22,10 @@ namespace Lsf.Models
             }
         }
 
-        public Semester(int year, SemesterType semesterType)
+        public Semester Next()
         {
-            Year = year;
-            SemesterType = semesterType;
+            return new Semester(SemesterType == SemesterType.Summer ? Year : Year + 1,
+                SemesterType == SemesterType.Summer ? SemesterType.Winter : SemesterType.Summer);
         }
 
         public static Semester FromSemesterCode(int code)
@@ -30,32 +36,33 @@ namespace Lsf.Models
             return new Semester(year, semesterType);
         }
 
-        public static implicit operator Semester(int code) => FromSemesterCode(code);
-        public static implicit operator int(Semester semester) => semester.ToSemesterCode();
+        public static implicit operator Semester(int code)
+        {
+            return FromSemesterCode(code);
+        }
+
+        public static implicit operator int(Semester semester)
+        {
+            return semester.ToSemesterCode();
+        }
 
         public static Semester Parse(string str)
         {
+            if (int.TryParse(str, out var code)) return FromSemesterCode(code);
+
             var semesterTypeStr = str.Substring(0, 4).ToLower();
             var yearStr = str.Substring(5, 2);
 
             SemesterType semesterType;
             if (semesterTypeStr == "wise")
-            {
                 semesterType = SemesterType.Winter;
-            } else if (semesterTypeStr == "sose")
-            {
+            else if (semesterTypeStr == "sose")
                 semesterType = SemesterType.Summer;
-            }
             else
-            {
                 throw new FormatException("The semester type string could not be parsed");
-            }
 
-            if (int.TryParse(yearStr, out var year))
-            {
-                return new Semester(year, semesterType);
-            }
-            
+            if (int.TryParse(yearStr, out var year)) return new Semester(year, semesterType);
+
             throw new FormatException("The semester Year could not be parsed");
         }
 

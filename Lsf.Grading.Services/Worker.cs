@@ -1,7 +1,5 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel.Design;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,11 +14,11 @@ namespace Lsf.Grading.Services
 {
     public class Worker : BackgroundService
     {
-        private readonly ILogger<Worker> _logger;
         private readonly Config _config;
+        private readonly LsfHttpClient _httpClient;
+        private readonly ILogger<Worker> _logger;
 
         private readonly List<INotifier> _notifiers;
-        private readonly LsfHttpClient _httpClient;
 
         public Worker(ILogger<Worker> logger, IConfiguration config)
         {
@@ -40,13 +38,13 @@ namespace Lsf.Grading.Services
                 await HandleError("Authentication for fetching grades failed!");
                 return;
             }
-            
-            _logger.LogDebug($"Execution started");
 
-            
+            _logger.LogDebug("Execution started");
+
+
             var parser = new GradingParser(_httpClient);
-            IEnumerable<Degree> degrees = new List<Degree>();
-            
+            IEnumerable<ExamResultChangeTracking> degrees = new List<ExamResultChangeTracking>();
+
             while (!stoppingToken.IsCancellationRequested)
             {
                 try
@@ -69,43 +67,51 @@ namespace Lsf.Grading.Services
             await Notify(message);
         }
 
-        private async Task<IEnumerable<Degree>> UpdateExamResults(GradingParser parser, IEnumerable<Degree> previousDegrees)
+        private async Task<IEnumerable<ExamResultChangeTracking>> UpdateExamResults(GradingParser parser,
+            IEnumerable<ExamResultChangeTracking> previousExamResults)
         {
-            var changes = new List<ExamResultChangeTracking>();
             var currentDegrees = await parser.GetGradesForAllDegrees();
+            var previousExamResultsArr =
+                previousExamResults as ExamResultChangeTracking[] ?? previousExamResults.ToArray();
+            var changes = GetChangedExams(previousExamResultsArr, currentDegrees.SelectMany(ToExamResultChangeTracking))
+                .ToArray();
 
-            var previousDegreesArr = previousDegrees as Degree[] ?? previousDegrees.ToArray();
-            foreach (var degree in currentDegrees)
+            if (changes.Length > 0)
             {
-                if (!previousDegreesArr.Contains(degree, new GenericEqualityComparer<Degree>((a, b) => a.Id == b.Id)))
-                {
-                    changes.AddRange(ToExamResultChangeTracking(degree));
-                }
-                else
-                {
-                    foreach (var major in degree.GradingMajors)
-                    {
-                        if (!degree.GradingMajors.Contains(major,
-                            new GenericEqualityComparer<Major>((a, b) => a.Id == b.Id)))
-                        {
-                            changes.AddRange(ToExamResultChangeTracking(degree, major));
-                        }
-                        else
-                        {
-                            changes.AddRange(major.Gradings.Where(grading => !major.Gradings.Contains(grading,
-                                    new GenericEqualityComparer<ExamResult>((a, b) =>
-                                        a.ExamNumber == b.ExamNumber && a.Try == b.Try &&
-                                        a.ExamState == b.ExamState &&
-                                        (float.IsNaN(a.Grade) && float.IsNaN(b.Grade) ||
-                                         Math.Abs(a.Grade - b.Grade) < .001))))
-                                .Select(grading => ToExamResultChangeTracking(degree, major, grading)));
-                        }
-                    }
-                }
+                _logger.LogInformation($"Found {changes.Length} changes in exam results.");
+                await Notify(changes);
+            }
+            else
+            {
+                _logger.LogDebug("Found no new exams");
             }
 
-            var changedDegrees = changes
-                .GroupBy(x => x.DegreeId)
+            return changes.Union(previousExamResultsArr, new GenericEqualityComparer<ExamResultChangeTracking>((a, b) =>
+                a.ExamResult.ExamNumber == b.ExamResult.ExamNumber && a.ExamResult.Try == b.ExamResult.Try &&
+                a.ExamResult.ExamState == b.ExamResult.ExamState &&
+                (float.IsNaN(a.ExamResult.Grade) && float.IsNaN(b.ExamResult.Grade) ||
+                 Math.Abs(a.ExamResult.Grade - b.ExamResult.Grade) < .001)));
+        }
+
+        public static IEnumerable<ExamResultChangeTracking> GetChangedExams(
+            IEnumerable<ExamResultChangeTracking> previousExamResults,
+            IEnumerable<ExamResultChangeTracking> currentExamResults)
+        {
+            return currentExamResults.Where(grading => !previousExamResults.Contains(grading,
+                new GenericEqualityComparer<ExamResultChangeTracking>((a, b) =>
+                    a.ExamResult.ExamNumber == b.ExamResult.ExamNumber && a.ExamResult.Try == b.ExamResult.Try &&
+                    a.ExamResult.ExamState == b.ExamResult.ExamState &&
+                    (float.IsNaN(a.ExamResult.Grade) && float.IsNaN(b.ExamResult.Grade) ||
+                     Math.Abs(a.ExamResult.Grade - b.ExamResult.Grade) < .001) &&
+                    a.DegreeId == b.DegreeId &&
+                    a.DegreeName == b.DegreeName &&
+                    a.MajorId == b.MajorId &&
+                    a.MajorName == b.MajorName)));
+        }
+
+        private Task Notify(IEnumerable<ExamResultChangeTracking> examResults)
+        {
+            return Notify(examResults.GroupBy(x => x.DegreeId)
                 .Select(g => new Degree
                 {
                     Id = g.Key,
@@ -117,33 +123,33 @@ namespace Lsf.Grading.Services
                             Name = mg.First().MajorName,
                             Gradings = mg.Select(x => x.ExamResult)
                         })
-                }).ToArray();
-
-            if (changedDegrees.Length > 0)
-            {
-                _logger.LogInformation($"Found {changes.Count} changes in exam results.");
-                await Notify(changedDegrees);
-            }
-            else
-            {
-                _logger.LogDebug($"Found no new exams");
-            }
-
-            return previousDegreesArr.Union(changedDegrees, new GenericEqualityComparer<Degree>((a, b) => a.Id == b.Id));
+                }));
         }
 
+        private Task Notify(IEnumerable<Degree> degrees)
+        {
+            return Task.WhenAll(_notifiers.Select(n => n.NotifyChange(degrees)));
+        }
 
-        private Task Notify(IEnumerable<Degree> degrees) => Task.WhenAll(_notifiers.Select(n => n.NotifyChange(degrees)));
+        private Task Notify(string message)
+        {
+            return Task.WhenAll(_notifiers.Select(n => n.NotifyError(message)));
+        }
 
-        private Task Notify(string message) => Task.WhenAll(_notifiers.Select(n => n.NotifyError(message)));
+        private static IEnumerable<ExamResultChangeTracking> ToExamResultChangeTracking(Degree degree)
+        {
+            return degree.GradingMajors.SelectMany(m => ToExamResultChangeTracking(degree, m));
+        }
 
-        private IEnumerable<ExamResultChangeTracking> ToExamResultChangeTracking(Degree degree) =>
-            degree.GradingMajors.SelectMany(m => ToExamResultChangeTracking(degree, m));
+        private static IEnumerable<ExamResultChangeTracking> ToExamResultChangeTracking(Degree degree, Major major)
+        {
+            return major.Gradings.Select(g => ToExamResultChangeTracking(degree, major, g));
+        }
 
-        private IEnumerable<ExamResultChangeTracking> ToExamResultChangeTracking(Degree degree, Major major) =>
-            major.Gradings.Select(g => ToExamResultChangeTracking(degree, major, g));
-        private ExamResultChangeTracking ToExamResultChangeTracking(Degree degree, Major major, ExamResult result) =>
-            new ExamResultChangeTracking
+        private static ExamResultChangeTracking ToExamResultChangeTracking(Degree degree, Major major,
+            ExamResult result)
+        {
+            return new ExamResultChangeTracking
             {
                 DegreeId = degree.Id,
                 DegreeName = degree.Name,
@@ -151,5 +157,6 @@ namespace Lsf.Grading.Services
                 MajorId = major.Id,
                 MajorName = major.Name
             };
+        }
     }
 }

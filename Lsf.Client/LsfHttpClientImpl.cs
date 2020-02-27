@@ -34,9 +34,9 @@ namespace Lsf.Client
         public override bool IsAuthenticated { get; protected set; }
 
         public override string BaseUrl { get; }
-        
+
         public override Uri BaseUri => new Uri(BaseUrl);
-        
+
         public override string Url(string queryParams)
         {
             return $"{BaseUrl}/qislsf/rds?{queryParams}";
@@ -61,7 +61,7 @@ namespace Lsf.Client
             };
 
             jSessionIdCookie.Value = jSessionId;
-            
+
             CookieContainer.Add(new Uri(GetMainPageUrl()), jSessionIdCookie);
 
             return await VerifyAuthentication();
@@ -69,10 +69,7 @@ namespace Lsf.Client
 
         public override async Task<bool> Authenticate(string userName, string password)
         {
-            if (await VerifyAuthentication())
-            {
-                return true;
-            }
+            if (await VerifyAuthentication()) return true;
 
             var loginPage = await GetMainPage();
             var form = loginPage.DocumentNode.QuerySelectorAll("form")
@@ -80,10 +77,7 @@ namespace Lsf.Client
 
             var url = form?.Attributes["action"]?.Value;
 
-            if (url is null)
-            {
-                return false;
-            }
+            if (url is null) return false;
 
             var content = await PostHtmlAsync(
                 HtmlEntity.DeEntitize(url), new FormUrlEncodedContent(new Dictionary<string, string>
@@ -96,13 +90,13 @@ namespace Lsf.Client
             return result;
         }
 
-        private async Task<bool> VerifyAuthentication()
+        public async Task<bool> VerifyAuthentication()
         {
             var content = await GetMainPage();
 
             return VerifyAuthentication(content);
         }
-        
+
         private bool VerifyAuthentication(HtmlDocument content)
         {
             var result = content.DocumentNode.QuerySelectorAll("a")
@@ -111,6 +105,11 @@ namespace Lsf.Client
 
             IsAuthenticated = result;
             return result;
+        }
+
+        public string GetLoginCookie()
+        {
+            return CookieContainer.GetCookies(new Uri(GetMainPageUrl())).FirstOrDefault()?.Value;
         }
     }
 }

@@ -144,6 +144,7 @@
         <e p="CalendarPrinterTests.cs" t="Include" />
         <e p="ClientTests.cs" t="Include" />
         <e p="GradingTests.cs" t="Include" />
+        <e p="GradingUpdateTests.cs" t="Include" />
         <e p="Lsf.Test.csproj" t="IncludeRecursive" />
         <e p="bin" t="ExcludeRecursive" />
         <e p="obj" t="ExcludeRecursive">
