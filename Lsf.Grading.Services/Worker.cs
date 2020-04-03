@@ -16,14 +16,16 @@ namespace Lsf.Grading.Services
     {
         private readonly Config _config;
         private readonly LsfHttpClient _httpClient;
+        private readonly IHostApplicationLifetime _lifeTime;
         private readonly ILogger<Worker> _logger;
 
         private readonly List<INotifier> _notifiers;
 
-        public Worker(ILogger<Worker> logger, IConfiguration config)
+        public Worker(ILogger<Worker> logger, IConfiguration config, IHostApplicationLifetime lifeTime)
         {
             _logger = logger;
             _config = config.Get<Config>();
+            _lifeTime = lifeTime;
             _notifiers = new List<INotifier>
             {
                 new TelegramNotifier(_config.TelegramBotAccessToken, _logger, _config.TelegramChatId)
@@ -33,7 +35,24 @@ namespace Lsf.Grading.Services
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            if (!await _httpClient.Authenticate(_config.LoginCookie))
+            Task<bool> loginTask;
+            if (!string.IsNullOrEmpty(_config.LoginCookie))
+            {
+                _logger.LogInformation("Logging in with login cookie");
+                loginTask = _httpClient.Authenticate(_config.LoginCookie);
+            }
+            else if (!string.IsNullOrEmpty(_config.Password) && !string.IsNullOrEmpty(_config.UserName))
+            {
+                _logger.LogInformation("Logging in with username and password");
+                loginTask = _httpClient.Authenticate(_config.UserName, _config.Password);
+            }
+            else
+            {
+                await HandleError("No authentication provided!");
+                return;
+            }
+
+            if (!await loginTask)
             {
                 await HandleError("Authentication for fetching grades failed!");
                 return;
@@ -65,6 +84,8 @@ namespace Lsf.Grading.Services
         {
             _logger.LogError(message);
             await Notify(message);
+
+            _lifeTime.StopApplication();
         }
 
         private async Task<IEnumerable<ExamResultChangeTracking>> UpdateExamResults(GradingParser parser,
