@@ -8,5 +8,6 @@ namespace Lsf.Grading.Services
         public string TelegramBotAccessToken { get; set; }
         public string TelegramChatId { get; set; }
         public string BaseUrl { get; set; }
+        public string SaveFile { get; set; }
     }
 }

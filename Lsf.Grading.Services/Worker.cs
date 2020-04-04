@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,6 +10,7 @@ using Lsf.Grading.Parser;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Lsf.Grading.Services
 {
@@ -32,6 +34,10 @@ namespace Lsf.Grading.Services
             };
             _httpClient = new LsfHttpClientImpl(_config.BaseUrl);
         }
+
+        private string SaveFilePath => string.IsNullOrEmpty(_config.SaveFile)
+            ? Path.Join(Directory.GetCurrentDirectory(), "gradingresults.json")
+            : _config.SaveFile;
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
@@ -59,16 +65,18 @@ namespace Lsf.Grading.Services
             }
 
             _logger.LogDebug("Execution started");
+            _logger.LogInformation($"Storing and saving results to {SaveFilePath}");
 
 
             var parser = new GradingParser(_httpClient);
-            IEnumerable<ExamResultChangeTracking> degrees = new List<ExamResultChangeTracking>();
+            var degrees = LoadFromFile().ToArray();
 
             while (!stoppingToken.IsCancellationRequested)
             {
                 try
                 {
-                    degrees = await UpdateExamResults(parser, degrees);
+                    degrees = (await UpdateExamResults(parser, degrees)).ToArray();
+                    SaveToFile(degrees);
                 }
                 catch (Exception e)
                 {
@@ -86,6 +94,20 @@ namespace Lsf.Grading.Services
             await Notify(message);
 
             _lifeTime.StopApplication();
+        }
+
+        private void SaveToFile(IEnumerable<ExamResultChangeTracking> results)
+        {
+            var json = JsonConvert.SerializeObject(results);
+            File.WriteAllText(SaveFilePath, json);
+        }
+
+        private IEnumerable<ExamResultChangeTracking> LoadFromFile()
+        {
+            if (!File.Exists(SaveFilePath)) return Enumerable.Empty<ExamResultChangeTracking>();
+
+            var json = File.ReadAllText(SaveFilePath);
+            return JsonConvert.DeserializeObject<ExamResultChangeTracking[]>(json);
         }
 
         private async Task<IEnumerable<ExamResultChangeTracking>> UpdateExamResults(GradingParser parser,
