@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -16,6 +17,9 @@ namespace Lsf.Grading.Services
 {
     public class Worker : BackgroundService
     {
+        private const string ENV_LSF_PASSWORD = "LSF_PASSWORD";
+        private const string ENV_LSF_USER = "LSF_USER";
+        
         private readonly Config _config;
         private readonly LsfHttpClient _httpClient;
         private readonly IHostApplicationLifetime _lifeTime;
@@ -39,6 +43,17 @@ namespace Lsf.Grading.Services
             ? Path.Join(Directory.GetCurrentDirectory(), "gradingresults.json")
             : _config.SaveFile;
 
+        private string? GetPassword()
+        {
+            return string.IsNullOrEmpty(_config.Password) ? Environment.GetEnvironmentVariable(ENV_LSF_PASSWORD) : _config.Password;
+        }
+
+        private string? GetUserName()
+        {
+            return string.IsNullOrEmpty(_config.UserName) ? Environment.GetEnvironmentVariable(ENV_LSF_USER) : _config.UserName;
+
+        }
+
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             Task<bool> loginTask;
@@ -47,10 +62,10 @@ namespace Lsf.Grading.Services
                 _logger.LogInformation("Logging in with login cookie");
                 loginTask = _httpClient.Authenticate(_config.LoginCookie);
             }
-            else if (!string.IsNullOrEmpty(_config.Password) && !string.IsNullOrEmpty(_config.UserName))
+            else if (!string.IsNullOrEmpty(GetPassword()) && !string.IsNullOrEmpty(GetUserName()))
             {
                 _logger.LogInformation("Logging in with username and password");
-                loginTask = _httpClient.Authenticate(_config.UserName, _config.Password);
+                loginTask = _httpClient.Authenticate(GetUserName(), GetPassword());
             }
             else
             {
@@ -80,20 +95,23 @@ namespace Lsf.Grading.Services
                 }
                 catch (Exception e)
                 {
-                    await HandleError("An Exception occured: \n" + e);
-                    throw;
+                    await HandleError(e);
                 }
 
                 await Task.Delay(15 * 60 * 1000, stoppingToken);
             }
         }
 
+        private async Task HandleError(Exception e)
+        {
+            _logger.LogError(e.ToString());
+            await Notify("An Exception occured: \n" + e.Message);
+        }
+
         private async Task HandleError(string message)
         {
             _logger.LogError(message);
             await Notify(message);
-
-            _lifeTime.StopApplication();
         }
 
         private void SaveToFile(IEnumerable<ExamResultChangeTracking> results)
