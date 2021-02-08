@@ -1,0 +1,8 @@
+FROM mcr.microsoft.com/dotnet/sdk
+
+RUN mkdir -p "/app"
+COPY ./ /app
+
+RUN dotnet publish -c Release /app/Lsf.Grading.Services/Lsf.Grading.Services.csproj
+
+ENTRYPOINT /app/Lsf.Grading.Services/bin/Release/net5.0/Lsf.Grading.Services

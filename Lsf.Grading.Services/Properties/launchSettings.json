@@ -3,7 +3,8 @@
     "Lsf.Grading.Services": {
       "commandName": "Project",
       "environmentVariables": {
-        "DOTNET_ENVIRONMENT": "Development"
+        "DOTNET_ENVIRONMENT": "Development",
+        "LSF_CONFIGFILE_PATH": "/home/bjoern/lsf/settings.json"
       }
     }
   }

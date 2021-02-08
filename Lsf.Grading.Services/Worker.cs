@@ -13,13 +13,12 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
+using static Lsf.Grading.Services.Constants;
+
 namespace Lsf.Grading.Services
 {
     public class Worker : BackgroundService
     {
-        private const string ENV_LSF_PASSWORD = "LSF_PASSWORD";
-        private const string ENV_LSF_USER = "LSF_USER";
-        
         private readonly Config _config;
         private readonly LsfHttpClient _httpClient;
         private readonly IHostApplicationLifetime _lifeTime;
@@ -34,7 +33,7 @@ namespace Lsf.Grading.Services
             _lifeTime = lifeTime;
             _notifiers = new List<INotifier>
             {
-                new TelegramNotifier(_config.TelegramBotAccessToken, _logger, _config.TelegramChatId)
+                new TelegramNotifier(GetTelegramBotToken(), _logger, GetTelegramChatId())
             };
             _httpClient = new LsfHttpClientImpl(_config.BaseUrl);
         }
@@ -43,14 +42,22 @@ namespace Lsf.Grading.Services
             ? Path.Join(Directory.GetCurrentDirectory(), "gradingresults.json")
             : _config.SaveFile;
 
+        private string? GetEnvOrConfig(Func<Config, string> getter, string env) =>
+            !string.IsNullOrEmpty(Environment.GetEnvironmentVariable(env))
+                ? Environment.GetEnvironmentVariable(env)
+                : getter(_config);
+
+        private string? GetTelegramBotToken() => GetEnvOrConfig(c => c.TelegramBotAccessToken, ENV_TELEGRAM_BOT_TOKEN);
+        private string? GetTelegramChatId() => GetEnvOrConfig(c => c.TelegramChatId, ENV_TELEGRAM_CHAT_ID);
+        
         private string? GetPassword()
         {
-            return string.IsNullOrEmpty(_config.Password) ? Environment.GetEnvironmentVariable(ENV_LSF_PASSWORD) : _config.Password;
+            return string.IsNullOrEmpty(_config.Password) ? Environment.GetEnvironmentVariable(Constants.ENV_LSF_PASSWORD) : _config.Password;
         }
 
         private string? GetUserName()
         {
-            return string.IsNullOrEmpty(_config.UserName) ? Environment.GetEnvironmentVariable(ENV_LSF_USER) : _config.UserName;
+            return string.IsNullOrEmpty(_config.UserName) ? Environment.GetEnvironmentVariable(Constants.ENV_LSF_USER) : _config.UserName;
 
         }
 
@@ -90,7 +97,9 @@ namespace Lsf.Grading.Services
             {
                 try
                 {
-                    degrees = (await UpdateExamResults(parser, degrees)).ToArray();
+                    var task = UpdateExamResults(parser, degrees);
+                    task.Wait(stoppingToken);
+                    degrees = task.Result.ToArray();
                     SaveToFile(degrees);
                 }
                 catch (Exception e)
@@ -104,7 +113,7 @@ namespace Lsf.Grading.Services
 
         private async Task HandleError(Exception e)
         {
-            _logger.LogError(e.ToString());
+            _logger.LogError("An Exception occured: \n" + e);
             await Notify("An Exception occured: \n" + e.Message);
         }
 

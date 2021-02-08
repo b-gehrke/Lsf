@@ -2,7 +2,8 @@
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>netcoreapp3.0</TargetFramework>
+        <TargetFramework>net5.0</TargetFramework>
+        <LangVersion>default</LangVersion>
     </PropertyGroup>
 
     <ItemGroup>
@@ -35,7 +36,7 @@
       <ProjectReference Include="..\Lsf.Client\Lsf.Client.csproj" />
       <ProjectReference Include="..\Lsf.Models\Lsf.Models.csproj" />
       <ProjectReference Include="..\Lsf.Schedule\Lsf.Schedule.csproj" />
-      <ProjectReference Include="..\Lsf.Util\Lsf.Util.csproj"/>
+      <ProjectReference Include="..\Lsf.Util\Lsf.Util.csproj" />
     </ItemGroup>
 
 </Project>

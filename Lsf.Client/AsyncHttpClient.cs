@@ -1,6 +1,7 @@
 using System;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using HtmlAgilityPack;
 
@@ -38,9 +39,16 @@ namespace Lsf.Client
             return document;
         }
 
-        public async Task<HtmlDocument> GetHtmlAsync(string url)
+        public Task<HtmlDocument> GetHtmlAsync(string url)
         {
-            var content = await GetStringAsync(url);
+            return GetHtmlAsync(url, CancellationToken.None);
+        }
+
+
+        public async Task<HtmlDocument> GetHtmlAsync(string url, CancellationToken token)
+        {
+            var response = await GetAsync(url);
+            var content = await response.Content.ReadAsStringAsync();
             var doc = new HtmlDocument();
             doc.LoadHtml(content);
 

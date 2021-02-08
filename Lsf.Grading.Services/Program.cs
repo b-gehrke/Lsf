@@ -17,12 +17,17 @@ namespace Lsf.Grading.Services
                 .Run();
         }
 
-        public static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
+        public static IHostBuilder CreateHostBuilder(string[] args)
+        {
+            var configPath = Environment.GetEnvironmentVariable(Constants.ENV_CONFIG_FILE);
+            
+            return Host.CreateDefaultBuilder(args)
                 .UseSystemd()
-                .ConfigureServices((hostContext, services) =>
+                .ConfigureHostConfiguration(a =>
                 {
-                    services.AddHostedService<Worker>();
-                });
+                    if(!string.IsNullOrEmpty(configPath)) a.AddJsonFile(configPath);
+                })
+                .ConfigureServices((hostContext, services) => { services.AddHostedService<Worker>(); });
+        }
     }
 }
