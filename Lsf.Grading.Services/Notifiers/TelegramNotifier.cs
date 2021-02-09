@@ -1,26 +1,30 @@
-using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using Lsf.Grading.Models;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
 
-namespace Lsf.Grading.Services
+namespace Lsf.Grading.Services.Notifiers
 {
     public class TelegramNotifier : INotifier
     {
+        public record Config
+        {
+            public string TelegramBotAccessToken { get; set; }
+            public string TelegramChatId { get; set; }
+        }
+        
         private readonly TelegramBotClient _botClient;
         private readonly ILogger _logger;
         private readonly string _telegramChatId;
 
-        public TelegramNotifier(string telegramAccessToken, ILogger logger, string telegramChatId)
+        public TelegramNotifier(ILogger logger, Config config)
         {
-            _botClient = new TelegramBotClient(telegramAccessToken);
+            _botClient = new TelegramBotClient(config.TelegramBotAccessToken);
             _logger = logger;
-            _telegramChatId = telegramChatId;
+            _telegramChatId = config.TelegramChatId;
         }
 
         public Task NotifyChange(IEnumerable<Degree> degrees)

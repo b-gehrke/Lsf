@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Lsf.Grading.Models;
 
-namespace Lsf.Grading.Services
+namespace Lsf.Grading.Services.Notifiers
 {
     public interface INotifier
     {

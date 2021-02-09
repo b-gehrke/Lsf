@@ -4,6 +4,7 @@
         <TargetFramework>net5.0</TargetFramework>
         <UserSecretsId>dotnet-Lsf.Grading.Services-4339C5D3-DA03-4CBF-A44B-5C3FE5713BF0</UserSecretsId>
         <LangVersion>9</LangVersion>
+        <Nullable>enable</Nullable>
     </PropertyGroup>
 
     <ItemGroup>

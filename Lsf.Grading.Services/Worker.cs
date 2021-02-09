@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Lsf.Client;
 using Lsf.Grading.Models;
 using Lsf.Grading.Parser;
+using Lsf.Grading.Services.Notifiers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -24,17 +25,14 @@ namespace Lsf.Grading.Services
         private readonly IHostApplicationLifetime _lifeTime;
         private readonly ILogger<Worker> _logger;
 
-        private readonly List<INotifier> _notifiers;
+        private readonly IList<INotifier> _notifiers;
 
         public Worker(ILogger<Worker> logger, IConfiguration config, IHostApplicationLifetime lifeTime)
         {
             _logger = logger;
             _config = config.Get<Config>();
             _lifeTime = lifeTime;
-            _notifiers = new List<INotifier>
-            {
-                new TelegramNotifier(GetTelegramBotToken(), _logger, GetTelegramChatId())
-            };
+            _notifiers = NotifierFactory.CreateFromConfig(config, logger).ToList();
             _httpClient = new LsfHttpClientImpl(_config.BaseUrl);
         }
 
@@ -42,22 +40,15 @@ namespace Lsf.Grading.Services
             ? Path.Join(Directory.GetCurrentDirectory(), "gradingresults.json")
             : _config.SaveFile;
 
-        private string? GetEnvOrConfig(Func<Config, string> getter, string env) =>
-            !string.IsNullOrEmpty(Environment.GetEnvironmentVariable(env))
-                ? Environment.GetEnvironmentVariable(env)
-                : getter(_config);
 
-        private string? GetTelegramBotToken() => GetEnvOrConfig(c => c.TelegramBotAccessToken, ENV_TELEGRAM_BOT_TOKEN);
-        private string? GetTelegramChatId() => GetEnvOrConfig(c => c.TelegramChatId, ENV_TELEGRAM_CHAT_ID);
-        
         private string? GetPassword()
         {
-            return string.IsNullOrEmpty(_config.Password) ? Environment.GetEnvironmentVariable(Constants.ENV_LSF_PASSWORD) : _config.Password;
+            return string.IsNullOrEmpty(_config.Password) ? Environment.GetEnvironmentVariable(ENV_LSF_PASSWORD) : _config.Password;
         }
 
         private string? GetUserName()
         {
-            return string.IsNullOrEmpty(_config.UserName) ? Environment.GetEnvironmentVariable(Constants.ENV_LSF_USER) : _config.UserName;
+            return string.IsNullOrEmpty(_config.UserName) ? Environment.GetEnvironmentVariable(ENV_LSF_USER) : _config.UserName;
 
         }
 
