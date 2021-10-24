@@ -12,8 +12,8 @@ namespace Lsf.Grading.Services.Notifiers
     {
         public record Config
         {
-            public string TelegramBotAccessToken { get; set; }
-            public string TelegramChatId { get; set; }
+            public string TelegramBotAccessToken { get; init; }
+            public string TelegramChatId { get; init; }
         }
         
         private readonly TelegramBotClient _botClient;

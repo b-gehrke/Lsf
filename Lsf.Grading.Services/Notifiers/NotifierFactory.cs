@@ -7,8 +7,16 @@ using static Lsf.Grading.Services.Constants;
 
 namespace Lsf.Grading.Services.Notifiers
 {
+    /// <summary>
+    /// Factory methods to create notifiers based on the provides configuration
+    /// </summary>
     public static class NotifierFactory
     {
+        /// <summary>
+        /// Tries to get an environment variable. If it doesn't exist or is empty, <value>null</value> is returned.
+        /// </summary>
+        /// <param name="key">Name of the environment variable</param>
+        /// <returns>Content of the variable or <value>null</value> if variable doesn't exist or is empty</returns>
         private static string? GetFromEnv(string key)
         {
             var val = Environment.GetEnvironmentVariable(key);
@@ -16,6 +24,12 @@ namespace Lsf.Grading.Services.Notifiers
             return string.IsNullOrEmpty(val) ? null : val;
         }
         
+        /// <summary>
+        /// Creates notifiers based on the provided configuration
+        /// </summary>
+        /// <param name="config">Configuration object</param>
+        /// <param name="logger">Application logger</param>
+        /// <returns>Instantiated and configured notifiers</returns>
         public static IEnumerable<INotifier> CreateFromConfig(IConfiguration config, ILogger logger)
         {
             var telegramSection = config.GetSection(CONF_TELEGRAM);

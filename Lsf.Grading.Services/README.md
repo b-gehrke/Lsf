@@ -37,6 +37,8 @@ Sends updates and errors via request to a given url.
 `CallbackUrl` |  | Url to call
 `Method` | `GET` | Methode to use
 
+## Systemd
+This service can be used with `systemd`. See [LsfGradingService.service](LsfGradingService.service) for an example file.
 
 ## Docker
 Build the docker image from the repository root directory with
