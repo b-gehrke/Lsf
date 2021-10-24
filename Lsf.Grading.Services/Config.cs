@@ -2,10 +2,10 @@ namespace Lsf.Grading.Services
 {
     public record Config
     {
-        public string? UserName { get; }
-        public string? Password { get;  }
-        public string? LoginCookie { get; }
-        public string BaseUrl { get; } = null!;
-        public string SaveFile { get; } = "gradingresults.json";
+        public string? UserName { get; set; }
+        public string? Password { get; set; }
+        public string? LoginCookie { get; set;  }
+        public string BaseUrl { get; set; }
+        public string SaveFile { get; set;  } = "gradingresults.json";
     }
 }
