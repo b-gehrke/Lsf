@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -106,12 +107,14 @@ namespace Lsf.Grading.Services
         {
             _logger.LogError("An Exception occured: \n" + e);
             await Notify("An Exception occured: \n" + e.Message);
+            _lifeTime.StopApplication();
         }
 
         private async Task HandleError(string message)
         {
             _logger.LogError(message);
             await Notify(message);
+            _lifeTime.StopApplication();
         }
 
         private void SaveToFile(IEnumerable<ExamResultChangeTracking> results)
